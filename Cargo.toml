@@ -11,6 +11,10 @@ crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 libc = "0.2.149"
+oauth2 = "4.4.2"
+serde = { version = "1.0.193", features = ["derive"] }
+serde_yaml = "0.9.27"
+url = "2.4.1"
 
 [build-dependencies]
 bindgen = "0.68.1"

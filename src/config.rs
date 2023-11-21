@@ -15,3 +15,55 @@
 *	with this program; if not, write to the Free Software Foundation, Inc.,
 *	51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
+use std::{fs, io};
+
+use oauth2::{
+    basic::BasicClient, reqwest::http_client, AuthUrl, ClientId, ClientSecret,
+    ResourceOwnerPassword, ResourceOwnerUsername, Scope, TokenUrl,
+};
+use serde::Deserialize;
+
+use crate::bindings::{pam_ext::PAM_ABORT, pam_modules::PAM_SUCCESS};
+
+#[derive(Deserialize)]
+pub struct PamOidcConfig {
+    client_id: String,
+    client_secret: String,
+    auth_url: String,
+    token_url: String,
+}
+
+pub const PAM_OIDC_CONFIG: &str = "/etc/pam_oidc/config.toml";
+
+impl PamOidcConfig {
+    pub fn new() -> io::Result<PamOidcConfig> {
+        let data = fs::read_to_string(PAM_OIDC_CONFIG)?;
+        match serde_yaml::from_str::<PamOidcConfig>(&data) {
+            Ok(conf) => return Ok(conf),
+            Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidData, e)),
+        }
+    }
+
+    pub fn authorize_user(&self, user: &str, pass: &str) -> Result<i32, url::ParseError> {
+        let client = BasicClient::new(
+            ClientId::new(self.client_id.to_string()),
+            Some(ClientSecret::new(self.client_secret)),
+            AuthUrl::new(self.auth_url)?,
+            Some(TokenUrl::new(self.token_url)?),
+        );
+
+        let resp = client
+            .exchange_password(
+                &ResourceOwnerUsername::new(user.to_string()),
+                &ResourceOwnerPassword::new(pass.to_string()),
+            )
+            .add_scope(Scope::new("openid".to_string()))
+            .request(http_client);
+
+        match resp {
+            Ok(resp) => Ok(PAM_SUCCESS as i32),
+            Err(e) => Err(_),
+        }
+    }
+}

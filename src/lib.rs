@@ -16,29 +16,59 @@
 *	51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-use bindings::pam_modules::{pam_get_user, pam_handle_t};
+use std::{ffi::CString, ptr::null};
+
+use bindings::{
+    pam_ext::pam_get_authtok,
+    pam_modules::{
+        pam_get_user, pam_handle_t, PAM_ABORT, PAM_NO_MODULE_DATA, PAM_SUCCESS, PAM_TRY_AGAIN,
+    },
+    pam_modutil::PAM_AUTHTOK,
+};
 
 mod bindings;
 mod config;
-mod oidc;
+mod oauth;
 
 #[no_mangle]
 pub extern "C" fn pam_sm_authenticate(
     pamh: *mut pam_handle_t,
-    flags: ::std::os::raw::c_int,
-    argc: ::std::os::raw::c_int,
-    argv: *mut *const ::std::os::raw::c_char,
-) -> ::std::os::raw::c_int {
-    0
+    flags: std::os::raw::c_int,
+    argc: std::os::raw::c_int,
+    argv: *mut *const std::os::raw::c_char,
+) -> std::os::raw::c_int {
+    let u: *mut *const i8;
+    let p: *mut *const i8;
+    unsafe {
+        let err = pam_get_user(pamh, u, null());
+        if err != PAM_SUCCESS as i32 {
+            return PAM_TRY_AGAIN as i32;
+        }
+
+        let err = pam_get_authtok(pamh, PAM_AUTHTOK as i32, p, null());
+        if err != PAM_SUCCESS as i32 {
+            return PAM_TRY_AGAIN as i32;
+        }
+    }
+
+    if let Ok(conf) = config::PamOidcConfig::new() {
+        let resp = conf.authorize_user(user, pass);
+        match resp {
+            Ok(v) => v,
+            Err(_) => PAM_ABORT as i32,
+        }
+    } else {
+        PAM_NO_MODULE_DATA as i32
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn pam_sm_open_session(
     pamh: *mut pam_handle_t,
-    flags: ::std::os::raw::c_int,
-    argc: ::std::os::raw::c_int,
-    argv: *mut *const ::std::os::raw::c_char,
-) -> ::std::os::raw::c_int {
+    flags: std::os::raw::c_int,
+    argc: std::os::raw::c_int,
+    argv: *mut *const std::os::raw::c_char,
+) -> std::os::raw::c_int {
     unsafe {
         // let user: *mut *const ::std::os::raw::c_char;
         // let prompt: *const ::std::os::raw::c_char;
