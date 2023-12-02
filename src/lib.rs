@@ -16,7 +16,7 @@
 *	51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-use std::{ffi::CString, ptr::null};
+use std::{ffi::CStr, ptr::null};
 
 use bindings::{
     pam_ext::pam_get_authtok,
@@ -37,18 +37,36 @@ pub extern "C" fn pam_sm_authenticate(
     argc: std::os::raw::c_int,
     argv: *mut *const std::os::raw::c_char,
 ) -> std::os::raw::c_int {
-    let u: *mut *const i8;
-    let p: *mut *const i8;
+    let user: &str;
+    let pass: &str;
+    let ucstr: &CStr;
+    let pcstr: &CStr;
+
     unsafe {
-        let err = pam_get_user(pamh, u, null());
+        let ubuf: *const i8;
+        let pbuf: *const i8;
+        let err = pam_get_user(pamh, ubuf, null());
         if err != PAM_SUCCESS as i32 {
             return PAM_TRY_AGAIN as i32;
         }
 
-        let err = pam_get_authtok(pamh, PAM_AUTHTOK as i32, p, null());
+        let err = pam_get_authtok(pamh, PAM_AUTHTOK as i32, pbuf, null());
         if err != PAM_SUCCESS as i32 {
             return PAM_TRY_AGAIN as i32;
         }
+
+        ucstr = CStr::from_ptr(ubuf);
+        pcstr = CStr::from_ptr(pbuf);
+    }
+
+    match ucstr.to_str() {
+        Ok(s) => user = s,
+        Err(e) => return PAM_ABORT as i32,
+    }
+
+    match pcstr.to_str() {
+        Ok(s) => pass = s,
+        Err(e) => return PAM_ABORT as i32,
     }
 
     if let Ok(conf) = config::PamOidcConfig::new() {
