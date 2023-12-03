@@ -19,7 +19,7 @@
 use oauth2::{
     basic::BasicErrorResponseType, reqwest::Error, RequestTokenError, StandardErrorResponse,
 };
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 #[derive(Debug)]
 pub enum PamOidcError {
@@ -31,6 +31,7 @@ pub enum PamOidcError {
 }
 
 impl PamOidcError {
+    #[allow(unused)]
     pub fn wrap_err<T, E>(result: Result<T, E>) -> Result<T, PamOidcError>
     where
         E: Debug + Into<PamOidcError>,
@@ -41,8 +42,19 @@ impl PamOidcError {
         }
     }
 
+    #[allow(unused)]
     pub fn new_internal(msg: String) -> Self {
         Self::Internal(msg)
+    }
+}
+
+impl Display for PamOidcError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::UrlParseError(e) => write!(f, "{}", e),
+            Self::RequestTokenError(e) => write!(f, "{}", e),
+            Self::Internal(e) => write!(f, "{}", e),
+        }
     }
 }
 

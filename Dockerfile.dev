@@ -15,6 +15,4 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-FROM docker.io/arch:latest
-
-COPY target/debug/libpam_oidc.so /lib/security/pam_oidc.so
+FROM docker.io/archlinux:latest

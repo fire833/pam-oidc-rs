@@ -17,10 +17,18 @@
 
 services:
   pam_svc:
-    container_name: pam_svc
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
+    image: docker.io/archlinux:latest
+    # container_name: pam_svc
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile.dev
+    command: sleep 5000
+    volumes:
+    - "./test/pam-login:/etc/pam.d/system-login"
+    - "./test/pam_config.yaml:/etc/pam_oidc/config.yaml"
+    - "./target/debug/libpam_oidc.so:/lib/security/pam_oidc.so"
+    - "/var/log"
+    - "/var/log/audit"
   keycloak:
     image: quay.io/keycloak/keycloak:latest
     container_name: kc
