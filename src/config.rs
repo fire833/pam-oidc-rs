@@ -24,7 +24,7 @@ use oauth2::{
 };
 use serde::Deserialize;
 
-use crate::bindings::{pam_ext::PAM_ABORT, pam_modules::PAM_SUCCESS};
+use crate::error::PamOidcError;
 
 #[derive(Deserialize)]
 pub struct PamOidcConfig {
@@ -34,7 +34,7 @@ pub struct PamOidcConfig {
     token_url: String,
 }
 
-pub const PAM_OIDC_CONFIG: &str = "/etc/pam_oidc/config.toml";
+pub const PAM_OIDC_CONFIG: &str = "/etc/pam_oidc/config.yaml";
 
 impl PamOidcConfig {
     pub fn new() -> io::Result<PamOidcConfig> {
@@ -45,7 +45,53 @@ impl PamOidcConfig {
         }
     }
 
-    pub fn authorize_user(&self, user: &str, pass: &str) -> Result<i32, url::ParseError> {
+    pub fn new_from_args(args: &[String]) -> io::Result<PamOidcConfig> {
+        let mut client_id: String;
+        let mut client_secret: String;
+        let mut auth_url: String;
+        let mut token_url: String;
+
+        let cid_name = String::from("client_id");
+        let cs_name = String::from("client_secret");
+        let aurl_name = String::from("auth_url");
+        let turl_name = String::from("token_url");
+
+        let mut found = false;
+
+        for (i, arg) in args.iter().enumerate() {
+            match arg.to_owned() {
+                cid_name if !found => {
+                    client_id = args[i + 1];
+                    found = true;
+                }
+                cs_name if !found => {
+                    client_secret = args[i + 1];
+                    found = true;
+                }
+                aurl_name => {
+                    auth_url = args[i + 1];
+                    found = true;
+                }
+                turl_name => {
+                    token_url = args[i + 1];
+                    found = true;
+                }
+                _ if found => {
+                    found = false;
+                }
+                _ => {}
+            }
+        }
+
+        Ok(Self {
+            client_id,
+            client_secret,
+            auth_url,
+            token_url,
+        })
+    }
+
+    pub fn authorize_user(&self, user: &str, pass: &str) -> Result<i32, PamOidcError> {
         let client = BasicClient::new(
             ClientId::new(self.client_id.to_string()),
             Some(ClientSecret::new(self.client_secret)),
@@ -62,8 +108,8 @@ impl PamOidcConfig {
             .request(http_client);
 
         match resp {
-            Ok(resp) => Ok(PAM_SUCCESS as i32),
-            Err(e) => Err(_),
+            Ok(resp) => Ok(0),
+            Err(e) => Err(e.into()),
         }
     }
 }
