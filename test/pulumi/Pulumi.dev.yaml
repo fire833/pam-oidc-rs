@@ -1,0 +1,8 @@
+encryptionsalt: v1:oeHAtOGEQQU=:v1:ykST3l7oBRfCqJ/t:tZrYQYOoNUTwIf+9KJWPXgitYwi2og==
+config:
+  keycloak:clientId: admin-cli
+  keycloak:clientTimeout: "7"
+  keycloak:password:
+    secure: v1:lcJuNz9NgM5eHO5p:URk0hQw3VJIJ3k8hjoRFMIcN7ko=
+  keycloak:url: http://localhost:8000
+  keycloak:username: admin

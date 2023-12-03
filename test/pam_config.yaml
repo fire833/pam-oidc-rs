@@ -15,21 +15,9 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-services:
-  pam_svc:
-    container_name: pam_svc
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-  keycloak:
-    image: quay.io/keycloak/keycloak:latest
-    container_name: kc
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: pass
-    ports:
-    - "8000:8080/tcp"
-    command: start-dev
+---
 
-networks:
-  main:
+client_id: pam_local
+client_secret: verybadsecret
+auth_url: http://kc:8000/realms/demo/protocol/openid-connect/auth
+token_url: http://kc:8000/realms/demo/protocol/openid-connect/token
