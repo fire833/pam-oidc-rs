@@ -16,10 +16,12 @@
 *	51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-use libc::{c_char, c_int};
 use pam::{
     constants::{PamFlag, PamResultCode},
-    module::PamHandle,
+    conv::Conv,
+    items,
+    module::{PamHandle, PamHooks},
+    pam_hooks,
 };
 
 use crate::config::PamOidcConfig;
@@ -28,34 +30,56 @@ mod config;
 mod error;
 mod oauth;
 
-#[no_mangle]
-pub extern "C" fn pam_sm_authenticate(
-    module: PamHandle,
-    _: PamFlag,
-    _: c_int,
-    _: *const *const c_char,
-) -> PamResultCode {
-    let user: String;
-    let pass: String;
+pub struct PamOidc {}
+pam_hooks!(PamOidc);
 
-    match module.get_user(Some("Provide your username: ")) {
-        Ok(u) => user = u,
-        Err(e) => return e,
+impl PamHooks for PamOidc {
+    fn sm_authenticate(
+        module: &mut PamHandle,
+        _: Vec<&std::ffi::CStr>,
+        _: PamFlag,
+    ) -> PamResultCode {
+        let user: String;
+        let pass: String;
+
+        match module.get_user(None) {
+            Ok(u) => user = u,
+            Err(e) => {
+                println!("unable to retrieve user");
+                return e;
+            }
+        }
+
+        pass = "".to_owned();
+
+        match PamOidcConfig::new() {
+            Ok(c) => match c.authorize_user(&user, &pass) {
+                Ok(c) => return c,
+                Err(e) => {
+                    println!("unable to authorize user: {}", e);
+                    return PamResultCode::PAM_PERM_DENIED;
+                }
+            },
+            Err(e) => {
+                println!("unable to read in config: {}", e);
+                return PamResultCode::PAM_ABORT;
+            }
+        }
     }
 
-    pass = "".to_owned();
+    fn sm_setcred(_: &mut PamHandle, _: Vec<&std::ffi::CStr>, _: PamFlag) -> PamResultCode {
+        PamResultCode::PAM_IGNORE
+    }
 
-    match PamOidcConfig::new() {
-        Ok(c) => match c.authorize_user(&user, &pass) {
-            Ok(c) => return c,
-            Err(e) => {
-                println!("unable to authorize user: {}", e);
-                return PamResultCode::PAM_CRED_INSUFFICIENT;
-            }
-        },
-        Err(e) => {
-            println!("unable to read in config: {}", e);
-            return PamResultCode::PAM_CRED_UNAVAIL;
-        }
+    fn sm_chauthtok(_: &mut PamHandle, _: Vec<&std::ffi::CStr>, _: PamFlag) -> PamResultCode {
+        PamResultCode::PAM_IGNORE
+    }
+
+    fn sm_open_session(_: &mut PamHandle, _: Vec<&std::ffi::CStr>, _: PamFlag) -> PamResultCode {
+        PamResultCode::PAM_IGNORE
+    }
+
+    fn sm_close_session(_: &mut PamHandle, _: Vec<&std::ffi::CStr>, _: PamFlag) -> PamResultCode {
+        PamResultCode::PAM_IGNORE
     }
 }
