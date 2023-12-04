@@ -18,8 +18,6 @@
 
 use pam::{
     constants::{PamFlag, PamResultCode},
-    conv::Conv,
-    items,
     module::{PamHandle, PamHooks},
     pam_hooks,
 };
@@ -46,23 +44,23 @@ impl PamHooks for PamOidc {
             Ok(u) => user = u,
             Err(e) => {
                 println!("unable to retrieve user");
-                return e;
+                return e.into();
             }
         }
 
-        pass = "".to_owned();
+        pass = "".into();
 
         match PamOidcConfig::new() {
             Ok(c) => match c.authorize_user(&user, &pass) {
                 Ok(c) => return c,
                 Err(e) => {
                     println!("unable to authorize user: {}", e);
-                    return PamResultCode::PAM_PERM_DENIED;
+                    return e.into();
                 }
             },
             Err(e) => {
                 println!("unable to read in config: {}", e);
-                return PamResultCode::PAM_ABORT;
+                return e.into();
             }
         }
     }

@@ -19,7 +19,9 @@
 use oauth2::{
     basic::BasicErrorResponseType, reqwest::Error, RequestTokenError, StandardErrorResponse,
 };
+use pam::constants::PamResultCode;
 use std::fmt::{Debug, Display};
+use std::io;
 
 #[derive(Debug)]
 pub enum PamOidcError {
@@ -27,6 +29,8 @@ pub enum PamOidcError {
     RequestTokenError(
         RequestTokenError<Error<reqwest::Error>, StandardErrorResponse<BasicErrorResponseType>>,
     ),
+    ConfigRetrievalError(io::Error),
+    ConfigUnmarshalError(serde_yaml::Error),
     Internal(String),
 }
 
@@ -54,6 +58,20 @@ impl Display for PamOidcError {
             Self::UrlParseError(e) => write!(f, "{}", e),
             Self::RequestTokenError(e) => write!(f, "{}", e),
             Self::Internal(e) => write!(f, "{}", e),
+            Self::ConfigRetrievalError(e) => write!(f, "{}", e),
+            Self::ConfigUnmarshalError(e) => write!(f, "{}", e),
+        }
+    }
+}
+
+impl Into<PamResultCode> for PamOidcError {
+    fn into(self) -> PamResultCode {
+        match self {
+            PamOidcError::Internal(_) => PamResultCode::PAM_ABORT,
+            PamOidcError::UrlParseError(_) => PamResultCode::PAM_ABORT,
+            PamOidcError::ConfigRetrievalError(_) => PamResultCode::PAM_OPEN_ERR,
+            PamOidcError::RequestTokenError(_) => PamResultCode::PAM_ABORT,
+            PamOidcError::ConfigUnmarshalError(_) => PamResultCode::PAM_ABORT,
         }
     }
 }
@@ -74,5 +92,17 @@ impl From<RequestTokenError<Error<reqwest::Error>, StandardErrorResponse<BasicEr
         >,
     ) -> Self {
         PamOidcError::RequestTokenError(value)
+    }
+}
+
+impl From<io::Error> for PamOidcError {
+    fn from(value: io::Error) -> Self {
+        PamOidcError::ConfigRetrievalError(value)
+    }
+}
+
+impl From<serde_yaml::Error> for PamOidcError {
+    fn from(value: serde_yaml::Error) -> Self {
+        PamOidcError::ConfigUnmarshalError(value)
     }
 }

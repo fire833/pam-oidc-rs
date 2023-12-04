@@ -16,7 +16,7 @@
 *	51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-use std::{fs, io};
+use std::fs;
 
 use oauth2::{
     basic::BasicClient, reqwest::http_client, AuthUrl, ClientId, ClientSecret,
@@ -38,11 +38,11 @@ pub struct PamOidcConfig {
 pub const PAM_OIDC_CONFIG: &str = "/etc/pam_oidc/config.yaml";
 
 impl PamOidcConfig {
-    pub fn new() -> io::Result<PamOidcConfig> {
+    pub fn new() -> Result<PamOidcConfig, PamOidcError> {
         let data = fs::read_to_string(PAM_OIDC_CONFIG)?;
         match serde_yaml::from_str::<PamOidcConfig>(&data) {
             Ok(conf) => return Ok(conf),
-            Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidData, e)),
+            Err(e) => return Err(e.into()),
         }
     }
 
