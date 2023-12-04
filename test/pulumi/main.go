@@ -44,6 +44,14 @@ func main() {
 			return e
 		}
 
+		_, e = keycloak.NewRealmEvents(ctx, "demorealm-events", &keycloak.RealmEventsArgs{
+			RealmId:            demo.Realm,
+			AdminEventsEnabled: pulumi.Bool(true),
+			EventsEnabled:      pulumi.Bool(true),
+		},
+			pulumi.DependsOn([]pulumi.Resource{demo}),
+		)
+
 		_, e = openid.NewClient(ctx, "pam-client", &openid.ClientArgs{
 			RealmId:    demo.Realm,
 			AccessType: pulumi.String("BEARER-ONLY"),
