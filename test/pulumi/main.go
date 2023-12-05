@@ -79,6 +79,7 @@ func main() {
 			Email:         pulumi.String("john@email.com"),
 			EmailVerified: pulumi.Bool(true),
 		},
+			pulumi.DeleteBeforeReplace(true),
 			pulumi.DependsOn([]pulumi.Resource{demo}))
 		if e != nil {
 			return e

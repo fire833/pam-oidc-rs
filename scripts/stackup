@@ -2,5 +2,6 @@
 
 # Reload keycloak stack whenever we have rebooted our containers
 
+cargo build
 rm -r ~/.pulumi/stacks/keycloak-demo
 PULUMI_CONFIG_PASSPHRASE=pass pulumi up -C test/pulumi -s dev -y

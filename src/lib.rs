@@ -26,7 +26,6 @@ use crate::config::PamOidcConfig;
 
 mod config;
 mod error;
-mod oauth;
 
 pub struct PamOidc {}
 pam_hooks!(PamOidc);
