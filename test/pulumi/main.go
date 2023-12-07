@@ -54,7 +54,7 @@ func main() {
 
 		_, e = openid.NewClient(ctx, "pam-client", &openid.ClientArgs{
 			RealmId:    demo.Realm,
-			AccessType: pulumi.String("BEARER-ONLY"),
+			AccessType: pulumi.String("CONFIDENTIAL"),
 			Name:       pulumi.String("pam_local"),
 			// Please do not use these credentials for anything but testing!
 			ClientId:     pulumi.String("pam_local"),

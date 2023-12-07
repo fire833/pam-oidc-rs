@@ -19,6 +19,7 @@
 use oauth2::{
     basic::BasicErrorResponseType, reqwest::Error, RequestTokenError, StandardErrorResponse,
 };
+use openidconnect::DiscoveryError;
 use pam::constants::PamResultCode;
 use std::fmt::{Debug, Display};
 use std::io;
@@ -29,6 +30,7 @@ pub enum PamOidcError {
     RequestTokenError(
         RequestTokenError<Error<reqwest::Error>, StandardErrorResponse<BasicErrorResponseType>>,
     ),
+    DiscoveryError(DiscoveryError<oauth2::reqwest::Error<reqwest::Error>>),
     ConfigRetrievalError(io::Error),
     ConfigUnmarshalError(serde_yaml::Error),
     Internal(String),
@@ -55,11 +57,25 @@ impl PamOidcError {
 impl Display for PamOidcError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::UrlParseError(e) => write!(f, "{}", e),
-            Self::RequestTokenError(e) => write!(f, "{}", e),
+            Self::UrlParseError(e) => write!(f, "url parse error: {}", e),
+            Self::RequestTokenError(e) => match e {
+                RequestTokenError::ServerResponse(resp) => {
+                    write!(f, "request token error (server response): {}", resp)
+                }
+                RequestTokenError::Parse(err, data) => {
+                    write!(f, "request token error (parse): {} - {:?}", err, data)
+                }
+                RequestTokenError::Request(req) => {
+                    write!(f, "request token error (request): {}", req)
+                }
+                RequestTokenError::Other(o) => {
+                    write!(f, "request token error (other): {}", o)
+                }
+            },
             Self::Internal(e) => write!(f, "{}", e),
-            Self::ConfigRetrievalError(e) => write!(f, "{}", e),
-            Self::ConfigUnmarshalError(e) => write!(f, "{}", e),
+            Self::ConfigRetrievalError(e) => write!(f, "config retrieve error: {}", e),
+            Self::ConfigUnmarshalError(e) => write!(f, "config unmarshal error: {}", e),
+            Self::DiscoveryError(e) => write!(f, "discovery error: {}", e),
         }
     }
 }
@@ -72,6 +88,7 @@ impl Into<PamResultCode> for PamOidcError {
             PamOidcError::ConfigRetrievalError(_) => PamResultCode::PAM_OPEN_ERR,
             PamOidcError::RequestTokenError(_) => PamResultCode::PAM_ABORT,
             PamOidcError::ConfigUnmarshalError(_) => PamResultCode::PAM_ABORT,
+            PamOidcError::DiscoveryError(_) => PamResultCode::PAM_ABORT,
         }
     }
 }
@@ -104,5 +121,11 @@ impl From<io::Error> for PamOidcError {
 impl From<serde_yaml::Error> for PamOidcError {
     fn from(value: serde_yaml::Error) -> Self {
         PamOidcError::ConfigUnmarshalError(value)
+    }
+}
+
+impl From<DiscoveryError<oauth2::reqwest::Error<reqwest::Error>>> for PamOidcError {
+    fn from(value: DiscoveryError<oauth2::reqwest::Error<reqwest::Error>>) -> Self {
+        PamOidcError::DiscoveryError(value)
     }
 }

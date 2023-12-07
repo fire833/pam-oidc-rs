@@ -19,8 +19,11 @@
 use std::fs;
 
 use oauth2::{
-    basic::BasicClient, reqwest::http_client, AuthUrl, ClientId, ClientSecret,
-    ResourceOwnerPassword, ResourceOwnerUsername, Scope, TokenUrl,
+    reqwest::http_client, ClientId, ClientSecret, ResourceOwnerPassword, ResourceOwnerUsername,
+};
+use openidconnect::{
+    core::{CoreClient, CoreProviderMetadata},
+    IssuerUrl,
 };
 use pam::constants::PamResultCode;
 use serde::Deserialize;
@@ -31,8 +34,7 @@ use crate::error::PamOidcError;
 pub struct PamOidcConfig {
     client_id: String,
     client_secret: String,
-    auth_url: String,
-    token_url: String,
+    issuer_url: String,
 }
 
 pub const PAM_OIDC_CONFIG: &str = "/etc/pam_oidc/config.yaml";
@@ -92,25 +94,33 @@ impl PamOidcConfig {
     //     })
     // }
 
-    pub fn authorize_user(&self, user: &str, pass: &str) -> Result<PamResultCode, PamOidcError> {
-        let client = BasicClient::new(
-            ClientId::new(self.client_id.to_string()),
-            Some(ClientSecret::new(self.client_secret.to_owned())),
-            AuthUrl::new(self.auth_url.to_owned())?,
-            Some(TokenUrl::new(self.token_url.to_owned())?),
+    pub fn authenticate_user(&self, user: &str, pass: &str) -> Result<PamResultCode, PamOidcError> {
+        let provider_meta = CoreProviderMetadata::discover(
+            &IssuerUrl::new(self.issuer_url.to_owned())?,
+            http_client,
         );
 
-        let resp = client
-            .exchange_password(
-                &ResourceOwnerUsername::new(user.to_string()),
-                &ResourceOwnerPassword::new(pass.to_string()),
-            )
-            .add_scope(Scope::new("openid".to_string()))
-            .request(http_client);
+        match provider_meta {
+            Ok(meta) => {
+                let client = CoreClient::from_provider_metadata(
+                    meta,
+                    ClientId::new(self.client_id.to_owned()),
+                    Some(ClientSecret::new(self.client_secret.to_owned())),
+                );
 
-        match resp {
-            Ok(_) => Ok(PamResultCode::PAM_SUCCESS),
-            Err(e) => Err(e.into()),
+                let username = ResourceOwnerUsername::new(user.to_string());
+                let password = ResourceOwnerPassword::new(pass.to_string());
+
+                let req = client.exchange_password(&username, &password);
+
+                match req.request(http_client) {
+                    Ok(_) => return Ok(PamResultCode::PAM_SUCCESS),
+                    Err(e) => {
+                        return Err(e.into());
+                    }
+                }
+            }
+            Err(e) => return Err(e.into()),
         }
     }
 }

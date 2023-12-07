@@ -19,5 +19,4 @@
 
 client_id: pam_local
 client_secret: verybadsecret
-auth_url: http://kc:8080/realms/demo/protocol/openid-connect/auth
-token_url: http://kc:8080/realms/demo/protocol/openid-connect/token
+issuer_url: http://kc:8080/realms/demo

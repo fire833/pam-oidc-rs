@@ -47,11 +47,11 @@ impl PamHooks for PamOidc {
             }
         }
 
-        pass = "".into();
+        pass = "pass".into();
 
         match PamOidcConfig::new() {
-            Ok(c) => match c.authorize_user(&user, &pass) {
-                Ok(c) => return c,
+            Ok(c) => match c.authenticate_user(&user, &pass) {
+                Ok(code) => return code,
                 Err(e) => {
                     println!("unable to authorize user: {}", e);
                     return e.into();
