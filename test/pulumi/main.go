@@ -53,12 +53,15 @@ func main() {
 		)
 
 		_, e = openid.NewClient(ctx, "pam-client", &openid.ClientArgs{
-			RealmId:    demo.Realm,
-			AccessType: pulumi.String("CONFIDENTIAL"),
-			Name:       pulumi.String("pam_local"),
+			RealmId:     demo.Realm,
+			AccessType:  pulumi.String("CONFIDENTIAL"),
+			Name:        pulumi.String("pam_local"),
+			Description: pulumi.String("Demo client for testing purposes. Please do not keep in production."),
 			// Please do not use these credentials for anything but testing!
-			ClientId:     pulumi.String("pam_local"),
-			ClientSecret: pulumi.String("verybadsecret"),
+			ClientId:                  pulumi.String("pam_local"),
+			ClientSecret:              pulumi.String("verybadsecret"),
+			ClientAuthenticatorType:   pulumi.String("client-secret"),
+			DirectAccessGrantsEnabled: pulumi.Bool(true),
 		},
 			pulumi.DependsOn([]pulumi.Resource{demo}))
 		if e != nil {
@@ -69,7 +72,7 @@ func main() {
 		_, e = keycloak.NewUser(ctx, "demouser", &keycloak.UserArgs{
 			RealmId:   demo.Realm,
 			Enabled:   pulumi.Bool(true),
-			Username:  pulumi.String("demouser"),
+			Username:  pulumi.String("john@email.com"),
 			FirstName: pulumi.String("John"),
 			LastName:  pulumi.String("Doe"),
 			InitialPassword: keycloak.UserInitialPasswordArgs{
@@ -84,6 +87,18 @@ func main() {
 		if e != nil {
 			return e
 		}
+
+		// _, e = keycloak.NewRole(ctx, "demo-role", &keycloak.RoleArgs{
+		// 	ClientId:    democlient.ClientId,
+		// 	RealmId:     demo.Realm,
+		// 	Name:        pulumi.String("demo-role"),
+		// 	Description: pulumi.String("Demo role for testing. Please do not use in production."),
+		// },
+		// 	pulumi.DependsOn([]pulumi.Resource{demo, democlient}),
+		// )
+		// if e != nil {
+		// 	return e
+		// }
 
 		return nil
 	})

@@ -47,7 +47,11 @@ impl PamHooks for PamOidc {
             }
         }
 
-        pass = "pass".into();
+        print!("Password: ");
+        match rpassword::read_password() {
+            Ok(p) => pass = p,
+            Err(_) => return PamResultCode::PAM_ABORT,
+        }
 
         match PamOidcConfig::new() {
             Ok(c) => match c.authenticate_user(&user, &pass) {
