@@ -16,10 +16,9 @@
 *	51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-use error::PamOidcError;
 use pam::{
     constants::{PamFlag, PamResultCode},
-    items::AuthTok,
+    items::ItemType,
     module::{PamHandle, PamHooks},
     pam_hooks,
 };
@@ -49,31 +48,13 @@ impl PamHooks for PamOidc {
             }
         }
 
-        match module.get_item::<AuthTok>() {
-            Ok(u) => {
-                if let Some(s) = u {
-                    match s.0.to_str() {
-                        Ok(s) => pass = s.to_string(),
-                        Err(e) => {
-                            let err: PamOidcError = e.into();
-                            return err.into();
-                        }
-                    }
-                } else {
-                    pass = String::from("");
-                }
+        match module.get_authtok(ItemType::AuthTok, None) {
+            Ok(p) => pass = p,
+            Err(e) => {
+                println!("unable to retrieve password");
+                return e.into();
             }
-            Err(e) => return e.into(),
         }
-
-        // rpassword::prompt_password("Password: ").unwrap();
-        // match rpassword::read_password() {
-        //     Ok(p) => {
-        //         println!("passwd: {}\n", p);
-        //         pass = p;
-        //     }
-        //     Err(_) => return PamResultCode::PAM_ABORT,
-        // }
 
         match PamOidcConfig::new() {
             Ok(c) => match c.authenticate_user(&user, &pass) {
