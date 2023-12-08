@@ -23,10 +23,12 @@ use openidconnect::DiscoveryError;
 use pam::constants::PamResultCode;
 use std::fmt::{Debug, Display};
 use std::io;
+use std::str;
 
 #[derive(Debug)]
 pub enum PamOidcError {
     UrlParseError(url::ParseError),
+    Utf8Error(str::Utf8Error),
     RequestTokenError(
         RequestTokenError<Error<reqwest::Error>, StandardErrorResponse<BasicErrorResponseType>>,
     ),
@@ -76,6 +78,7 @@ impl Display for PamOidcError {
             Self::ConfigRetrievalError(e) => write!(f, "config retrieve error: {}", e),
             Self::ConfigUnmarshalError(e) => write!(f, "config unmarshal error: {}", e),
             Self::DiscoveryError(e) => write!(f, "discovery error: {}", e),
+            Self::Utf8Error(e) => write!(f, "utf8error: {}", e),
         }
     }
 }
@@ -86,9 +89,10 @@ impl Into<PamResultCode> for PamOidcError {
             PamOidcError::Internal(_) => PamResultCode::PAM_ABORT,
             PamOidcError::UrlParseError(_) => PamResultCode::PAM_ABORT,
             PamOidcError::ConfigRetrievalError(_) => PamResultCode::PAM_OPEN_ERR,
-            PamOidcError::RequestTokenError(_) => PamResultCode::PAM_ABORT,
+            PamOidcError::RequestTokenError(_) => PamResultCode::PAM_AUTH_ERR,
             PamOidcError::ConfigUnmarshalError(_) => PamResultCode::PAM_ABORT,
-            PamOidcError::DiscoveryError(_) => PamResultCode::PAM_ABORT,
+            PamOidcError::DiscoveryError(_) => PamResultCode::PAM_AUTHINFO_UNAVAIL,
+            PamOidcError::Utf8Error(_) => PamResultCode::PAM_AUTHTOK_ERR,
         }
     }
 }
@@ -127,5 +131,11 @@ impl From<serde_yaml::Error> for PamOidcError {
 impl From<DiscoveryError<oauth2::reqwest::Error<reqwest::Error>>> for PamOidcError {
     fn from(value: DiscoveryError<oauth2::reqwest::Error<reqwest::Error>>) -> Self {
         PamOidcError::DiscoveryError(value)
+    }
+}
+
+impl From<str::Utf8Error> for PamOidcError {
+    fn from(value: str::Utf8Error) -> Self {
+        PamOidcError::Utf8Error(value)
     }
 }

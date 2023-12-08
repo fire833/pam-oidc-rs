@@ -52,13 +52,13 @@ func main() {
 			pulumi.DependsOn([]pulumi.Resource{demo}),
 		)
 
-		_, e = openid.NewClient(ctx, "pam-client", &openid.ClientArgs{
+		democlient, e := openid.NewClient(ctx, "pam-client", &openid.ClientArgs{
 			RealmId:     demo.Realm,
 			AccessType:  pulumi.String("CONFIDENTIAL"),
-			Name:        pulumi.String("pam_local"),
+			Name:        pulumi.String("pamlocal"),
 			Description: pulumi.String("Demo client for testing purposes. Please do not keep in production."),
 			// Please do not use these credentials for anything but testing!
-			ClientId:                  pulumi.String("pam_local"),
+			ClientId:                  pulumi.String("pamlocal"),
 			ClientSecret:              pulumi.String("verybadsecret"),
 			ClientAuthenticatorType:   pulumi.String("client-secret"),
 			DirectAccessGrantsEnabled: pulumi.Bool(true),
@@ -70,16 +70,16 @@ func main() {
 
 		// This user is only for demo purpose, please do not use in production.
 		_, e = keycloak.NewUser(ctx, "demouser", &keycloak.UserArgs{
-			RealmId:   demo.Realm,
+			RealmId:   demo.ID(),
 			Enabled:   pulumi.Bool(true),
-			Username:  pulumi.String("john@email.com"),
+			Username:  pulumi.String("john@t.co"),
 			FirstName: pulumi.String("John"),
 			LastName:  pulumi.String("Doe"),
 			InitialPassword: keycloak.UserInitialPasswordArgs{
 				Value:     pulumi.String("pass"),
 				Temporary: pulumi.Bool(false),
 			},
-			Email:         pulumi.String("john@email.com"),
+			Email:         pulumi.String("john@t.co"),
 			EmailVerified: pulumi.Bool(true),
 		},
 			pulumi.DeleteBeforeReplace(true),
@@ -88,17 +88,17 @@ func main() {
 			return e
 		}
 
-		// _, e = keycloak.NewRole(ctx, "demo-role", &keycloak.RoleArgs{
-		// 	ClientId:    democlient.ClientId,
-		// 	RealmId:     demo.Realm,
-		// 	Name:        pulumi.String("demo-role"),
-		// 	Description: pulumi.String("Demo role for testing. Please do not use in production."),
-		// },
-		// 	pulumi.DependsOn([]pulumi.Resource{demo, democlient}),
-		// )
-		// if e != nil {
-		// 	return e
-		// }
+		_, e = keycloak.NewRole(ctx, "demo-role", &keycloak.RoleArgs{
+			ClientId:    democlient.ID(),
+			RealmId:     demo.ID(),
+			Name:        pulumi.String("demo-role"),
+			Description: pulumi.String("Demo role for testing. Please do not use in production."),
+		},
+			pulumi.DependsOn([]pulumi.Resource{demo, democlient}),
+		)
+		if e != nil {
+			return e
+		}
 
 		return nil
 	})

@@ -17,6 +17,6 @@
 
 ---
 
-client_id: pam_local
+client_id: pamlocal
 client_secret: verybadsecret
 issuer_url: http://kc:8080/realms/demo
