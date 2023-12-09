@@ -69,7 +69,7 @@ func main() {
 		}
 
 		// This user is only for demo purpose, please do not use in production.
-		_, e = keycloak.NewUser(ctx, "demouser", &keycloak.UserArgs{
+		demouser, e := keycloak.NewUser(ctx, "demouser", &keycloak.UserArgs{
 			RealmId:   demo.ID(),
 			Enabled:   pulumi.Bool(true),
 			Username:  pulumi.String("john@t.co"),
@@ -88,11 +88,25 @@ func main() {
 			return e
 		}
 
-		_, e = keycloak.NewRole(ctx, "demo-role", &keycloak.RoleArgs{
+		demorole, e := keycloak.NewRole(ctx, "demo-role", &keycloak.RoleArgs{
 			ClientId:    democlient.ID(),
 			RealmId:     demo.ID(),
 			Name:        pulumi.String("demo-role"),
 			Description: pulumi.String("Demo role for testing. Please do not use in production."),
+		},
+			pulumi.DependsOn([]pulumi.Resource{demo, democlient}),
+		)
+		if e != nil {
+			return e
+		}
+
+		_, e = keycloak.NewUserRoles(ctx, "demouser-pam", &keycloak.UserRolesArgs{
+			RealmId: demo.ID(),
+			UserId:  demouser.ID(),
+			RoleIds: pulumi.StringArray{
+				demorole.ID(),
+			},
+			Exhaustive: pulumi.Bool(false),
 		},
 			pulumi.DependsOn([]pulumi.Resource{demo, democlient}),
 		)
