@@ -43,22 +43,27 @@ impl PamHooks for PamOidc {
         match module.get_user(None) {
             Ok(u) => user = u,
             Err(e) => {
-                println!("unable to retrieve user");
-                return e.into();
+                println!("unable to retrieve user: {:?}", e);
+                return PamResultCode::PAM_ABORT;
             }
         }
 
         match module.get_authtok(ItemType::AuthTok, None) {
             Ok(p) => pass = p,
             Err(e) => {
-                println!("unable to retrieve password");
-                return e.into();
+                println!("unable to retrieve password: {:?}", e);
+                return PamResultCode::PAM_ABORT;
             }
         }
 
         match PamOidcConfig::new() {
             Ok(c) => match c.authenticate_user(&user, &pass) {
-                Ok(code) => return code,
+                Ok(code) => {
+                    if code != PamResultCode::PAM_SUCCESS {
+                        println!("unsuccessful authentication: {:?}", code);
+                    }
+                    return code;
+                }
                 Err(e) => {
                     println!("unable to authorize user: {}", e);
                     return e.into();
