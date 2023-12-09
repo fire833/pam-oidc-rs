@@ -84,11 +84,19 @@ impl PamHooks for PamOidc {
         PamResultCode::PAM_IGNORE
     }
 
-    fn sm_open_session(_: &mut PamHandle, _: Vec<&std::ffi::CStr>, _: PamFlag) -> PamResultCode {
-        PamResultCode::PAM_IGNORE
+    fn sm_open_session(
+        pamh: &mut PamHandle,
+        args: Vec<&std::ffi::CStr>,
+        flags: PamFlag,
+    ) -> PamResultCode {
+        PamOidc::sm_authenticate(pamh, args, flags)
     }
 
-    fn sm_close_session(_: &mut PamHandle, _: Vec<&std::ffi::CStr>, _: PamFlag) -> PamResultCode {
-        PamResultCode::PAM_IGNORE
+    fn sm_close_session(
+        pamh: &mut PamHandle,
+        args: Vec<&std::ffi::CStr>,
+        flags: PamFlag,
+    ) -> PamResultCode {
+        PamOidc::sm_authenticate(pamh, args, flags)
     }
 }
